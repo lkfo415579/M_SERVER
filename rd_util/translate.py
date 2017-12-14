@@ -154,10 +154,9 @@ class Translator:
         #searching backward to find the last letter
         for x in sentences:
             #print "splited:",x
+            x = x.strip()
             cut_pos = len(x) + 1
             punctuation = x[-1]
-            #x = x.split(" ")
-            #print "S,list:",x
             #Exception case for single word or letter
             if len(x) == 1:
                  last_word = ""
@@ -166,14 +165,15 @@ class Translator:
                 last_word = x[-2]
                 if (last_word == " "):
                     last_word = x[-3]
-            combined_word = last_word+punctuation
+                    #double space appeared
+                    if last_word != " " and x[-4] == " ":
+                        last_word = last_word + " "
+            combined_word = last_word + punctuation
+            #print "DEBUG,cut_pos:",cut_pos,",punc:",punctuation
+            #print "COM,",combined_word,"\n-----"
             # print "last_word,",last_word
             # print "punctuation,",punctuation
             # print "combined_word,",combined_word
-            #cut_pos = len(x.replace(" ", "")) + 1
-            #ori_white = text[:cut_pos].count(" ")
-            #print "Ori",ori_white
-            #cut_pos += ori_white
             real_pos = text[:cut_pos].rfind(combined_word)
             real_pos += len(combined_word)
             ##append true sentence into list

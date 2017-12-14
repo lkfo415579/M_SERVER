@@ -14,10 +14,10 @@
 # License: GNU General Public License, see LICENSE.txt in the MBSP package
 
 
-__author__    = "Peter Hao Zong, Song Junping"
-__version__   = "1.4"
-__date__ = "July 2016"
-__copyright__ = "Copyright (c) 2016 GTCT"
+__author__    = "REVO"
+__version__   = "2.0"
+__date__ = "DEc 2017"
+__copyright__ = "Copyright (c) 2017"
 
 ######################################################################################################
 # Note for developers:

@@ -350,14 +350,14 @@ def set_up_GPU_devices(NMT_ctx):
     config = ['-c', NMT_ctx['MARIAN_SETTING'],'--mini-batch',NMT_ctx['MINI_BATCH'],'--maxi-batch','100','-b',NMT_ctx['BEAM_SIZE']]
     #determine GPU or CPU decode
     global nmt
-    if NMT_ctx['Decoder_type'] == 'CPU':
+    if NMT_ctx['Decoder_type'].upper() == 'CPU':
         import marian_python.nmtcpu as nmt
         if NMT_ctx['CPU_THREADS']:
             config.append("--cpu-threads")
             config.append(NMT_ctx['CPU_THREADS'])
             #mini-batch can only be one
             config[3] = '1'
-    elif NMT_ctx['DECODER_NETWORK'] == 'MARIAN':
+    elif NMT_ctx['DECODER_NETWORK'].upper() == 'MARIAN':
         #GPU decoder
         import marian_python.libmariannmt as nmt
         #NORMALIZE = 0.6, transformer
@@ -387,7 +387,7 @@ def set_up_GPU_devices(NMT_ctx):
     print "Total amount of queues : %d" % NMT_ctx['NMT_PROCESS']
     p_list = []
     for x in range(NMT_ctx['NMT_PROCESS']):
-        if NMT_ctx['Decoder_type'] != 'CPU':
+        if NMT_ctx['Decoder_type'].upper() != 'CPU':
             print "Using GPU as Decoder Devices."
             config.append('-d')
             config.append(str(NMT_ctx['DEVICES_LIST'][x % len(NMT_ctx['DEVICES_LIST'])]))
@@ -428,9 +428,14 @@ def main():
     N_BEST = S2B( str(g_config_obj[ 'N_BEST']))
     DEBUG = S2B(str( g_config_obj['DEBUG']))
     ##Decoding setting
-    Decoder_type = str( g_config_obj['DECODER_TYPE'])
-    CPU_THREADS = str(int( g_config_obj['CPU_THREADS']))
-    DECODER_NETWORK = str( g_config_obj['DECODER_NETWORK'])
+    try:
+        Decoder_type = str( g_config_obj['DECODER_TYPE'])
+        CPU_THREADS = str(int( g_config_obj['CPU_THREADS']))
+        DECODER_NETWORK = str( g_config_obj['DECODER_NETWORK'])
+    except:
+        Decoder_type = "GPU"
+        DECODER_NETWORK = "AMUN"
+        CPU_THREADS = 0
     ###Log
     logging.info("DEBUG MODEL : %s" % DEBUG)
     logging.info("DETECT Lang MODEL : %s" % detect_lang)
@@ -439,7 +444,7 @@ def main():
     logging.info("DEVICE_LIST:%s" % DEVICES_LIST)
     ##NORMALIZE config
     #check whether decoder network type
-    if DECODER_NETWORK == 'MARIAN' or DECODER_NETWORK == 'S2S':
+    if DECODER_NETWORK.upper() == 'MARIAN' or DECODER_NETWORK.upper() == 'S2S':
         N_BEST = False
         alignment = False
 
