@@ -39,10 +39,11 @@ ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES compute,utility
 ENV NVIDIA_REQUIRE_CUDA "cuda>=8.0"
 
+#JENKINS version
 #NMT stuffs
 RUN apt-get update && apt-get install -y libmecab-dev mecab mecab-ipadic-utf8
 RUN echo "set HOME=/root" >> /root/.bashrc
 RUN mkdir -p /tmp /root/SERVER
-COPY jieba.cache /tmp
-COPY SERVER /root/SERVER
-COPY NOBORU /root
+COPY jenkins_data/jieba.cache /tmp
+COPY jenkins_data/SERVER /root/SERVER
+COPY jenkins_data/NOBORU /root
