@@ -97,12 +97,12 @@ def isascii(word):
     return all(ord(char) < 128 for char in word)
 class Translator:
 
-    def __init__(self, SPLIT_SENTENCES_LEN, source_lang, target_lang):
+    def __init__(self, SPLIT_SENTENCES_LEN, source_lang, target_lang, jieba_hmm):
         self.source_lang = source_lang
         self.splitter = split_function(source_lang)
         # this is added on 11/21 2015
         if source_lang == 'zh' or source_lang=='ru' or source_lang == 'la' or source_lang == 'ug':
-            self.tokenizer = Tokenizer({'lowercase': False, 'moses_escape': True})
+            self.tokenizer = Tokenizer({'lowercase': False, 'moses_escape': True, 'jieba_hmm': jieba_hmm})
         else:
             self.tokenizer = Tokenizer({'lowercase': True, 'moses_escape': True})
 
@@ -159,31 +159,77 @@ class Translator:
             punctuation = x[-1]
             #Exception case for single word or letter
             if len(x) == 1:
+                 #single letter case
                  last_word = ""
                  punctuation = x
+                 pos = text[:cut_pos].rfind(punctuation)
+                 combined_word = punctuation
             else:
-                last_word = x[-2]
-                if (last_word == " "):
-                    last_word = x[-3]
-                    #double space appeared
-                    if last_word != " " and x[-4] == " ":
-                        last_word = last_word + " "
-            combined_word = last_word + punctuation
-            #print "DEBUG,cut_pos:",cut_pos,",punc:",punctuation
-            #print "COM,",combined_word,"\n-----"
-            # print "last_word,",last_word
-            # print "punctuation,",punctuation
-            # print "combined_word,",combined_word
-            real_pos = text[:cut_pos].rfind(combined_word)
-            real_pos += len(combined_word)
+                last_word = x[-3:-1]
+                combined_word = last_word + punctuation
+                #print "170,combined_word:",combined_word
+                #search in the first time, nt .<-case
+                pos = text[:cut_pos].rfind(combined_word)
+                #
+                if pos == -1:
+                    #first fail, nt. <-case
+                    if (x[-2] == " "):
+                        last_word = x[-3]
+                        #double space appeared
+                        if last_word != " " and x[-4] == " ":
+                            last_word = last_word + " "
+                    #second fail, chinese <-case
+                    if pos == -1:
+                        #retry,maybe chinese
+                        combined_word = combined_word.replace(" ","")
+                        pos = text[:cut_pos].rfind(combined_word)
+            #add letters len
+            pos += len(combined_word)
             ##append true sentence into list
-            task["original_sentences"].append(copy_text[:real_pos])
-            #print "found,ori",copy_text[:real_pos]
-            copy_text = copy_text[real_pos:]
+            task["original_sentences"].append(copy_text[:pos])
+            copy_text = copy_text[pos:]
             #q2b_sent
-            q2b_sentences.append(text[:real_pos])
-            #print "found,q2b",text[:real_pos]
-            text = text[real_pos:]
+            q2b_sentences.append(text[:pos])
+            text = text[pos:]
+
+        # for x in sentences:
+        #     print "splited:",x
+        #     x = x.strip()
+        #     cut_pos = len(x) + 1
+        #     punctuation = x[-1]
+        #     #Exception case for single word or letter
+        #     if len(x) == 1:
+        #          last_word = ""
+        #          punctuation = x
+        #     else:
+        #         last_word = x[-2]
+        #         if (last_word == " "):
+        #             last_word = x[-3]
+        #             #double space appeared
+        #             if last_word != " " and x[-4] == " ":
+        #                 last_word = last_word + " "
+        #     combined_word = last_word + punctuation
+        #     #print "DEBUG,cut_pos:",cut_pos,",punc:",punctuation
+        #     print "COM,",combined_word,"\n-----"
+        #     # print "last_word,",last_word
+        #     # print "punctuation,",punctuation
+        #     # print "combined_word,",combined_word
+        #     real_pos = text[:cut_pos].rfind(combined_word)
+        #     if real_pos == -1:
+        #         #retry,maybe chinese
+        #         combined_word = combined_word.replace(" ","")
+        #         real_pos = text[:cut_pos].rfind(combined_word)
+        #     real_pos += len(combined_word)
+        #     print "text[:cut_pos]:",text[:cut_pos]
+        #     print real_pos
+        #     ##append true sentence into list
+        #     task["original_sentences"].append(copy_text[:real_pos])
+        #     #print "found,ori",copy_text[:real_pos]
+        #     copy_text = copy_text[real_pos:]
+        #     #q2b_sent
+        #     q2b_sentences.append(text[:real_pos])
+        #     #print "found,q2b",text[:real_pos]
+        #     text = text[real_pos:]
         #handle CJK case Only
         '''for x in sentences:
             print "splited:",x

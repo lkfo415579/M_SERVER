@@ -107,13 +107,16 @@ class Server( tornado.web.RequestHandler):
     executor = concurrent.futures.ThreadPoolExecutor( int( g_config_obj['N_TASKS']))
 
     def initialize( self, server_ctx):
+        #
+        self.jieba_hmm = server_ctx['jieba_hmm']
+        #
         self.logger      = server_ctx['logger']
         self.bpe         = server_ctx['bpe']
         self.pidfile     = server_ctx['pidfile']
         self.NMT_PROCESS = server_ctx['NMT_PROCESS']
         self.SPLIT_SENTENCES_LEN = server_ctx['SPLIT_SENTENCES_LEN']
         self.task_id = tornado.process.task_id()
-        self.rd_translator = rd.Translator( self.SPLIT_SENTENCES_LEN,source_lang, target_lang)
+        self.rd_translator = rd.Translator( self.SPLIT_SENTENCES_LEN, source_lang, target_lang, self.jieba_hmm)
         self.timeout = server_ctx['timeout']
         self.detect_lang = server_ctx['detect_lang']
         self.alignment = server_ctx['alignment']
@@ -427,6 +430,11 @@ def main():
     alignment =   S2B(str( g_config_obj['ALIGNMENT']))
     N_BEST = S2B( str(g_config_obj[ 'N_BEST']))
     DEBUG = S2B(str( g_config_obj['DEBUG']))
+    #Special setting
+    try:
+        jieba_hmm = S2B(str( g_config_obj['JIEBA_HMM']))
+    except:
+        jieba_hmm = False
     ##Decoding setting
     try:
         Decoder_type = str( g_config_obj['DECODER_TYPE'])
@@ -460,6 +468,7 @@ def main():
                   'alignment' : alignment,
                   'N_BEST' : N_BEST,
                   'BEAM_SIZE' : BEAM_SIZE,
+                  'jieba_hmm' : jieba_hmm
     }
     NMT_ctx = {
                 'N_BEST' : N_BEST,

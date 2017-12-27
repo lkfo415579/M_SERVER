@@ -68,6 +68,9 @@ class Tokenizer(object):
         # process options
         self.lowercase = True if options.get('lowercase') else False
         self.moses_escape = True if options.get('moses_escape') else False
+        #
+        self.jieba_hmm = True if options.get('jieba_hmm') else False
+        #
         self.ts = options.get('num_t') if options.get('num_t') else 1
         # compile regexes
         self.__spaces = Regex(r'\s+', flags=UNICODE)
@@ -209,7 +212,12 @@ class Tokenizer(object):
             #text = self.preserve_url(text)
             #text=(' '.join(jieba.cut(text, HMM=False, cut_all=False)))
             #turn on HMM
-            text=(' '.join(jieba.cut(text, cut_all=False)))
+            if self.jieba_hmm:
+                #print "HMM=True"
+                text=(' '.join(jieba.cut(text, cut_all=False)))
+            else:
+                #print "HMM=False"
+                text=(' '.join(jieba.cut(text, HMM=False, cut_all=False)))
             # recover
             #text = self.recover_email_ZH(text)
             #text = self.recover_url_ZH(text)
