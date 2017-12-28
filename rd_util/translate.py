@@ -176,13 +176,19 @@ class Translator:
                     if (x[-2] == " "):
                         last_word = x[-3]
                         #double space appeared
-                        if last_word != " " and x[-4] == " ":
-                            last_word = last_word + " "
+                        if len(last_word) > 3:
+                            if last_word != " " and x[-4] == " ":
+                                last_word = last_word + " "
+                        #retry,maybe eng
+                        combined_word = combined_word.replace(" ","")
+                        pos = text[:cut_pos].rfind(combined_word)
                     #second fail, chinese <-case
                     if pos == -1:
                         #retry,maybe chinese
                         combined_word = combined_word.replace(" ","")
                         pos = text[:cut_pos].rfind(combined_word)
+            #test cobin
+            #print "191,combined_word:",combined_word
             #add letters len
             pos += len(combined_word)
             ##append true sentence into list
@@ -191,6 +197,7 @@ class Translator:
             #q2b_sent
             q2b_sentences.append(text[:pos])
             text = text[pos:]
+            #print text
 
         # for x in sentences:
         #     print "splited:",x
