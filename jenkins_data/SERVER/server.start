@@ -1,2 +1,0 @@
-#!/bin/bash
-/root/SERVER/bin/server_batch --config /nmtserver/config/nmtserver.cfg
