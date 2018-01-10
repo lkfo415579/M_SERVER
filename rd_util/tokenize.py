@@ -30,18 +30,22 @@ EDIT BY REVO : 8/30/2017. 6:17PM, fixed number unable be translated problem (onl
 """
 from __future__ import unicode_literals
 from regex import Regex, UNICODE
-#from fileprocess import process_lines
-import sys
-import getopt
-import threading
-import requests
-import codecs
-# import MeCab
-import json
-import jieba
-import MeCab
-#from pattern.en import tag
+# from fileprocess import process_lines
 
+import getopt
+# import threading
+# import requests
+# import codecs
+# import MeCab
+# import json
+
+import MeCab
+
+# import os
+# from pattern.en import tag
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 __author__ = "chao, Tian Liang,Hao Zongs,REVO"
 __date__ = "2017,V1.1"
 
@@ -54,7 +58,7 @@ class Tokenizer(object):
     """
 
     # Moses special characters escaping
-    ESCAPES = [('&', '&amp;'), # must go first to prevent double escaping!
+    ESCAPES = [('&', '&amp;'),  # must go first to prevent double escaping!
                ('|', '&bar;'),
                ('<', '&lt;'),
                ('>', '&gt;'),
@@ -65,22 +69,38 @@ class Tokenizer(object):
         """\
         Constructor (pre-compile all needed regexes).
         """
+        # url_replacer
+        self.URL_EMAIL_REPLACE = True if options.get(
+            'URL_EMAIL_REPLACE') else False
+
         # process options
         self.lowercase = True if options.get('lowercase') else False
         self.moses_escape = True if options.get('moses_escape') else False
         #
-        self.jieba_hmm = True if options.get('jieba_hmm') else False
+        self.jieba_option = options.get(
+            'jieba') if options.get('jieba') else "normal"
+        print "You are using Jieba :%s" % self.jieba_option
+        if self.jieba_option == 'c':
+            from rd_util.jieba_ext import jieba_python
+            # path = os.path.dirname(os.path.realpath(__file__))+"/jieba_ext"
+            # print path
+            # self.jieba = jieba_python.JIE_Tokenizer(path)
+            self.jieba = jieba_python.JIE_Tokenizer(str("rd_util/jieba_ext"))
+        else:
+            import jieba
+            self.jieba = jieba
         #
         self.ts = options.get('num_t') if options.get('num_t') else 1
         # compile regexes
         self.__spaces = Regex(r'\s+', flags=UNICODE)
         self.__ascii_junk = Regex(r'[\000-\037]')
         self.__special_chars = \
-                Regex(r'(([^\p{IsAlnum}\s\.\,−\-])\2*)')
+            Regex(r'(([^\p{IsAlnum}\s\.\,−\-])\2*)')
         # email address:
         self.__email_addr = Regex(r'([\w\.-]+@[\w\.-]+)')
         # url address:
-        self.__url_addr = Regex(r'(?P<url>https?://[a-zA-Z0-9:/\.?=!@$#&\*_()]+|www\.\w+\.[a-zA-Z0-9:/\.?=!@$#&\*_()]+|\w+\.\w+)')
+        self.__url_addr = Regex(
+            r'(?P<url>https?://[a-zA-Z0-9:/\.?=!@$#&\*_()]+|www\.\w+\.[a-zA-Z0-9:/\.?=!@$#&\*_()]+|\w+\.\w+)')
         # NEED TO PROTECT THIS EMAIL ADDRESS, EXTRACT IT AND TEHN INSERT BACK
 
         # single quotes: all unicode quotes + prime
@@ -94,24 +114,23 @@ class Tokenizer(object):
         self.__minus = Regex(r'([-−])')
         self.__pre_notnum = Regex(r'(-)([^\p{N}])')
         self.__post_num_or_nospace = Regex(r'(\p{N} *|[^ ])(-)')
-        self.__emails = [];
+        self.__emails = []
 
-        #NMT AREA
-        #NMT,seprate numbers
+        # NMT AREA
+        # NMT,seprate numbers
         self.__numbers = Regex(r'([0-9])')
-        #handling ' <- symbol
+        # handling ' <- symbol
         self.__real_apos = Regex(r"(\'(?!s ))")
-        #NMT AREA
+        # NMT AREA
 
         self.mecab_jp = MeCab.Tagger("-O wakati".encode("utf-8"))
 
-        #self.mecab_ko = MeCab.Tagger("-d /root/SERVER/bin/mecab-dic/ko -O wakati".encode("utf-8"))
-        self.mecab_ko = MeCab.Tagger("-d rd_util/mecab-dic/ko -O wakati".encode("utf-8"))
+        # self.mecab_ko = MeCab.Tagger("-d /root/SERVER/bin/mecab-dic/ko -O wakati".encode("utf-8"))
+        self.mecab_ko = MeCab.Tagger(
+            "-d rd_util/mecab-dic/ko -O wakati".encode("utf-8"))
 
-        #jieba.initialize()
-        #self.jieba_cut
-
-
+        # jieba.initialize()
+        # self.jieba_cut
 
     def tokenize_factors(self, pretoks, factor_no=0):
         """\
@@ -143,7 +162,7 @@ class Tokenizer(object):
         Preserve email address with "__email_addr__" for later recovery.
         '''
         self.__emails = self.__email_addr.findall(text)
-        print self.__emails
+        # print self.__emails
         return self.__email_addr.sub("__email_addr__", text)
 
     def recover_email(self, text):
@@ -170,7 +189,7 @@ class Tokenizer(object):
         '''
         self.__urls = self.__url_addr.findall(text)
         return self.__url_addr.sub("__url_addr__", text)
-        #return self.__url_addr.sub(";url_addr;", text)
+        # return self.__url_addr.sub(";url_addr;", text)
 
     def recover_url(self, text):
         '''
@@ -178,7 +197,7 @@ class Tokenizer(object):
         '''
         for i in xrange(len(self.__urls)):
             text = text.replace("__ url _ addr __", self.__urls[i], 1)
-            #text = text.replace("__ url _ addr __", "<unk_URL>", 1)
+            # text = text.replace("__ url _ addr __", "<unk_URL>", 1)
         del self.__urls
         return text
 
@@ -201,27 +220,36 @@ class Tokenizer(object):
         del self.__puncs
         return text
 
-    def tokenize(self, text,source_lang='en'):
+    def tokenize(self, text, source_lang='en'):
         """\
         Tokenize the given text using current settings.
         """
         # pad with spaces so that regexes match everywhere
-        #after deal with the english tokenizer
-        if source_lang == 'zh' or  source_lang == 'nzh' :
-            #text = self.preserve_email(text)
-            #text = self.preserve_url(text)
-            #text=(' '.join(jieba.cut(text, HMM=False, cut_all=False)))
-            #turn on HMM
-            if self.jieba_hmm:
-                #print "HMM=True"
-                text=(' '.join(jieba.cut(text, cut_all=False)))
+        # after deal with the english tokenizer
+        if source_lang == 'zh' or source_lang == 'nzh':
+            # text = self.preserve_email(text)
+            # text = self.preserve_url(text)
+            # text=(' '.join(jieba.cut(text, HMM=False, cut_all=False)))
+            # turn on HMM
+            if self.jieba_option == 'c':
+                # print "C"
+                # print "DECODE:",text.decode('utf8')
+                # print "ENCODE:",text.encode('utf8')
+                # print "str:",str(text)
+                # print "jieba:",self.jieba.tokenize(text)
+                text = unicode(self.jieba.tokenize(text))
+                # print "type:",type(text)
+            elif self.jieba_option == 'hmm':
+                # print "HMM=True"
+                text = (' '.join(self.jieba.cut(text, cut_all=False)))
+                # print "type:",type(text)
             else:
-                #print "HMM=False"
-                text=(' '.join(jieba.cut(text, HMM=False, cut_all=False)))
+                # normal
+                text = (' '.join(self.jieba.cut(text, HMM=False, cut_all=False)))
             # recover
-            #text = self.recover_email_ZH(text)
-            #text = self.recover_url_ZH(text)
-            #print "ZH:{0}".format(text)
+            # text = self.recover_email_ZH(text)
+            # text = self.recover_url_ZH(text)
+            # print "ZH:{0}".format(text)
             return text
         elif source_lang == 'ja' or source_lang == 'nja':
             result = self.mecab_jp.parse(text.encode("utf-8")).decode('utf8')
@@ -237,8 +265,9 @@ class Tokenizer(object):
         text = self.__ascii_junk.sub('', text)
 
         # preserve
-        #text = self.preserve_email(text)
-        #text = self.preserve_url(text)
+        if self.URL_EMAIL_REPLACE:
+            text = self.preserve_email(text)
+            text = self.preserve_url(text)
 
         # separate punctuation (consecutive items of same type stay together)
         text = self.__special_chars.sub(r' \1 ', text)
@@ -255,7 +284,7 @@ class Tokenizer(object):
         text = self.__post_num_or_nospace.sub(r'\1\2 ', text)
         text = self.__minus.sub(r' \1', text)
         # replace apos into double apos
-        text = self.__real_apos.sub('"',text)
+        text = self.__real_apos.sub('"', text)
         # spaces to single space
         text = self.__spaces.sub(' ', text)
         ##############
@@ -265,19 +294,20 @@ class Tokenizer(object):
             for char, repl in self.ESCAPES:
                 text = text.replace(char, repl)
         # nmt number seprate
-        #text = self.__numbers.sub(r' \1 ', text)
+        # text = self.__numbers.sub(r' \1 ', text)
         # recover
-        #text = self.recover_email(text)
-        #text = self.recover_url(text)
+        if self.URL_EMAIL_REPLACE:
+            text = self.recover_email(text)
+            text = self.recover_url(text)
         # lowercase
         if self.lowercase:
             text = text.lower()
 
-
         #####
-        #print "result:%s" % text
+        # print "result:%s" % text
 
         return text
+
 
 def display_usage():
     """\
@@ -313,5 +343,5 @@ if __name__ == '__main__':
     # process the input
     tok = Tokenizer(options)
     proc_func = tok.tokenize if factor is None else \
-            lambda text: tok.tokenize_factored_text(text, factor)
-    #process_lines(proc_func, filenames, encoding)
+        lambda text: tok.tokenize_factored_text(text, factor)
+    # process_lines(proc_func, filenames, encoding)

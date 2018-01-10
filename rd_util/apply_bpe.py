@@ -51,8 +51,8 @@ class BPE(object):
 
         #self.glossaries = glossaries if glossaries else []
         self.glossaries = []
-        for i in xrange(30):
-            self.glossaries.append("__URL"+str(i)+"__") 
+        for i in xrange(10):
+            self.glossaries.append("__URL"+str(i)+"__")
             #self.glossaries.append("__NUM"+str(i)+"__")
             self.glossaries.append("__EMAIL"+str(i)+"__")
         #
@@ -267,7 +267,7 @@ def isolate_glossary(word, glossary):
     """
     Isolate a glossary present inside a word.
 
-    Returns a list of subwords. In which all 'glossary' glossaries are isolated 
+    Returns a list of subwords. In which all 'glossary' glossaries are isolated
 
     For example, if 'USA' is the glossary and '1934USABUSA' the word, the return value is:
         ['1934', 'USA', 'B', 'USA']

@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python
 # coding: utf-8
 
-#### ENGLISH TOKENIZER ###############################################################################
+#  ENGLISH TOKENIZER ###############################################################################
 # Tokenizer divides a sequence of characters into words and sentences using regular expressions.
 # Special care is given to punctuation marks. We need to guess which punctuation marks are part
 # of a word (e.g. abbreviations) and which mark word and sentence breaks.
@@ -14,8 +14,8 @@
 # License: GNU General Public License, see LICENSE.txt in the MBSP package
 
 
-__author__    = "REVO"
-__version__   = "2.0"
+__author__ = "REVO"
+__version__ = "2.0"
 __date__ = "DEc 2017"
 __copyright__ = "Copyright (c) 2017"
 
@@ -23,19 +23,33 @@ __copyright__ = "Copyright (c) 2017"
 # Note for developers:
 # For performance, always compile regular expressions once, outside of the functions.
 
-import re, sys, getopt,codecs
+import re
+import sys
+import getopt
+import codecs
 
 PUNCTUATION = [ch for ch in """(){}[]<>!?.:;,`'"@#$%^&*+-|=~/\\_"""]
-LETTERS     = [ch for ch in "abcdefghijklmnopqrstuvwxyz"]
-CONSONANTS  = [ch for ch in "bcdfghjklmnpqrstvwxz"] # Need this for Mr. Mss. abbreviations.
-WHITESPACE  = [ch for ch in " \t\n\r\f\v"]          # Need this to split words.
-DASHES      = [ch for ch in u"–—"]                  # Not to be confused with hyphen.
+LETTERS = [ch for ch in "abcdefghijklmnopqrstuvwxyz"]
+# Need this for Mr. Mss. abbreviations.
+CONSONANTS = [ch for ch in "bcdfghjklmnpqrstvwxz"]
+WHITESPACE = [ch for ch in " \t\n\r\f\v"]          # Need this to split words.
+# Not to be confused with hyphen.
+DASHES = [ch for ch in u"–—"]
 
-is_uppercase   = lambda s: len(s)>0 and s==s.upper()                          # Goodbye => True
-is_capitalized = lambda s: len(s)>0 and s[0].isalpha() and s[0]==s[0].upper() # GOODBYE => True
+
+def is_uppercase(s): return len(s) > 0 and s == s.upper(
+)                          # Goodbye => True
+
+
+def is_capitalized(s): return len(s) > 0 and s[0].isalpha(
+) and s[0] == s[0].upper()  # GOODBYE => True
+
 
 digits = re.compile("^[0-9]+$")
-is_int = lambda s: digits.search(s) != None
+
+
+def is_int(s): return digits.search(s) != None
+
 
 # regex pattern for entities: &amp; &#164;
 entity = "&[a-z]+;|&#[0-9]+;|[|]"
@@ -44,6 +58,7 @@ entity = "&[a-z]+;|&#[0-9]+;|[|]"
 # Sets that match a range of words: all abbreviations, all numeric strings, all hyperlinks, ...
 # The Range class is a dictionary enriched with regular expression patterns.
 # You can do handy "word in Range()" or in_any(word, ranges) checks.
+
 
 class Range(dict):
 
@@ -59,11 +74,14 @@ class Range(dict):
                 return True
         return False
 
+
 def in_any(word, ranges=[]):
     for rng in ranges:
-        if word in rng: return True
+        if word in rng:
+            return True
 
 #--- ABBREVIATIONS -----------------------------------------------------------------------------------
+
 
 abbreviations = [
     "Adm.", "Ala.", "Ariz.", "Ark.", "Aug.", "B.C.", "Bancorp.", "Bhd.", "Brig.", "Bros.", "CO.",
@@ -81,6 +99,7 @@ abbreviations = [
     "Biochem.", "Cell.", "Proc.", "Res.", "Lond.", "Nat.", "Dev.", "Camb.", "Profilin.", "Thymosin-beta4."
 ]
 
+
 class Abbreviations(Range):
 
     def __init__(self, known=[]):
@@ -95,40 +114,44 @@ class Abbreviations(Range):
             - Fix with dictionary of known abbreviations: up to 99,07 accuracy.
             http://bulba.sdsu.edu/~malouf/ling571/13-token-bw.pdf
         """
-        Range.__init__(self, [(x,True) for x in known])
+        Range.__init__(self, [(x, True) for x in known])
         self.patterns = [
-            re.compile("^[A-Za-z]\.$"),                       # single letter, "T. De Smedt"
-            re.compile("^([A-Za-z]\.)+$"),                    # alternating letters, "U.S."
-            #re.compile(".+\.[,;]$"),                         # followed by punctuation, "dept.,"
-            re.compile("^[A-Z]["+"|".join(CONSONANTS)+"]+.$") # capital followed by consonants, "Mr."
+            # single letter, "T. De Smedt"
+            re.compile("^[A-Za-z]\.$"),
+            # alternating letters, "U.S."
+            re.compile("^([A-Za-z]\.)+$"),
+            # re.compile(".+\.[,;]$"),                         # followed by punctuation, "dept.,"
+            # capital followed by consonants, "Mr."
+            re.compile("^[A-Z][" + "|".join(CONSONANTS) + "]+.$")
         ]
 
     def __contains__(self, word):
         return word.endswith(".") and Range.__contains__(self, word)
 
+
 abbreviations = Abbreviations(abbreviations)
 
 #--- NUMBERS -----------------------------------------------------------------------------------------
 
-currencymarkers = [ "$", "£", "€", "EUR", "BEF", "US$", "C$" ]
+currencymarkers = ["$", "£", "€", "EUR", "BEF", "US$", "C$"]
 units = [
     "nm", "mm", "cm", "m", "km", "\"", "'", "ft",                  # length
     "g", "kg", "lb", "lbs", "oz",                                  # mass
     "l", "L", "mmol",                                              # volume
-    "hrs", "hr", "h", "u", "AM", "PM", "am", "pm", "a.m.", "p.m.", # time
+    "hrs", "hr", "h", "u", "AM", "PM", "am", "pm", "a.m.", "p.m.",  # time
     "BC", "AD", "B.C.", "A.D.",                                    # epoch
     "°C", "°F",                                                    # temperature
     "KB", "MB", "GB", "TB", "kb",  "mb", "gb", "tb",               # storage capacity
-    "Kb", "Mb", "Mbit", "Gb", "Tb",                                # data transfer rate
+    # data transfer rate
+    "Kb", "Mb", "Mbit", "Gb", "Tb",
     "%"                                                            # percentage
 ]
 # Add currencies to units
 units.extend(currencymarkers)
 
 # Make a Range() so we have the patterns for an amount starting with a currency marker (E.g. US$100)
-currencies=Range()
-currencies.patterns = [re.compile('^'+re.escape(x)) for x in currencymarkers]
-
+currencies = Range()
+currencies.patterns = [re.compile('^' + re.escape(x)) for x in currencymarkers]
 
 
 class Numeric(Range):
@@ -146,8 +169,9 @@ class Numeric(Range):
         # Anything that starts with a digit, ends with a digit,
         # with a mix of digits and punctuation in between, suffixed by a unit.
         # Note the 4: this is the maximum unit length.
-        self.patterns = [re.compile("^(\d*["+punctuation+"])*(\d+)(.{0,4})$")]
-        self._cache = ("", "", False) # (word, unit suffix, is number?)
+        self.patterns = [re.compile(
+            "^(\d*[" + punctuation + "])*(\d+)(.{0,4})$")]
+        self._cache = ("", "", False)  # (word, unit suffix, is number?)
 
     def __contains__(self, word):
         if self._cache[0] == word:
@@ -156,8 +180,8 @@ class Numeric(Range):
             u, b = "", False
         else:
             m = self.patterns[0].search(word)
-            u = m!=None and m.group(3) or ""
-            b = m!=None and u=="" or u in self.units
+            u = m != None and m.group(3) or ""
+            b = m != None and u == "" or u in self.units
         self._cache = (word, u, b)
         return b
 
@@ -172,7 +196,9 @@ class Numeric(Range):
     def cached(self):
         return self._cache[0]
 
+
 numeric = Numeric(units)
+
 
 def split_numeric(word):
     """ Returns a list with the word, and its unit if it is numeric: "100kg" => ["100", "kg"]
@@ -192,6 +218,7 @@ def split_numeric(word):
 
 #--- UNIFORM RESOURCE INDENTIFIERS -------------------------------------------------------------------
 
+
 class UniformResourceIdentifiers(Range):
 
     def __init__(self):
@@ -205,17 +232,24 @@ class UniformResourceIdentifiers(Range):
         """
         Range.__init__(self)
         self.patterns = [
-            re.compile("^(http|https|ftp|feed)://"),              # url: http://xxxxxx.xxx
-            re.compile("^www\."),                                 # domain: www.xxxxxx.xxx
-            re.compile("\.(com|org|net|us|eu|uk|de|be)(/.*?)*$"), # domain: xxxxxx.com, xxxxxx.net/Home
-            re.compile("^(.*?)@(.*?)\.(.*?)"),                     # email: xxx@xxx.xxx
-            #re.compile("(^\.*|^/|^[a-zA-Z])?:?/.+(/$)?"),          # unix path
-            re.compile("(^[a-zA-Z])?:?\\\\\w*\\.?\w*$")                    # windows path
+            # url: http://xxxxxx.xxx
+            re.compile("^(http|https|ftp|feed)://"),
+            # domain: www.xxxxxx.xxx
+            re.compile("^www\."),
+            # domain: xxxxxx.com, xxxxxx.net/Home
+            re.compile("\.(com|org|net|us|eu|uk|de|be)(/.*?)*$"),
+            # email: xxx@xxx.xxx
+            re.compile("^(.*?)@(.*?)\.(.*?)"),
+            # re.compile("(^\.*|^/|^[a-zA-Z])?:?/.+(/$)?"),          # unix path
+            # windows path
+            re.compile("(^[a-zA-Z])?:?\\\\\w*\\.?\w*$")
         ]
+
 
 URI = UniformResourceIdentifiers()
 
 #--- ENTITIES ----------------------------------------------------------------------------------------
+
 
 class Entities(Range):
 
@@ -228,9 +262,10 @@ class Entities(Range):
     def __contains__(self, word):
         if len(word) > 3 and word.startswith("&") and word.endswith(";"):
             if word[1:-1].isalpha() \
-            or word[1] == "#":
+                    or word[1] == "#":
                 return True
         return False
+
 
 entities = Entities()
 
@@ -243,41 +278,44 @@ entities = Entities()
 # These don't necessarily contain an apostrophe so we need to check them all.
 # The whole word is replaced.
 contractions = {
-    "cannot"  : "can not",
+    "cannot": "can not",
 }
 # Special English contractions containing apostrophe.
 # The whole word is replaced.
 contractions_apostrophe = {
-    "I'm"     : "I am",
-    "ain't"   : "am not",
-    "can't"   : "can not",
-    "won't"   : "will not",
-    "shan't"  : "shall not",
-    "let's"   : "let us",
-    "'cause"  : "because",
-    "'em"     : "them",
-    "'til"    : "until",
-    "'tis"    : "it is",
-    "'twas"   : "it was",
-    "'n'"     : "and",
-    "'nother" : "another"
+    "I'm": "I am",
+    "ain't": "am not",
+    "can't": "can not",
+    "won't": "will not",
+    "shan't": "shall not",
+    "let's": "let us",
+    "'cause": "because",
+    "'em": "them",
+    "'til": "until",
+    "'tis": "it is",
+    "'twas": "it was",
+    "'n'": "and",
+    "'nother": "another"
 }
 
 
-contractions_apostrophe = {} # Penn treebank's choice
+contractions_apostrophe = {}  # Penn treebank's choice
 # Common English verb contractions.
 # The word ending is replaced.
 contractions_suffixes = {
-    "n't"     : "n't", # Regular don't, isn't, wasn't, doesn't, haven't, ...
-    "'s"      : "'s",  # Can't disambiguate: it's been => it has been, it's hot => it is hot.
-    "'d"      : "'d",  # Can't disambiguate: I'd better go => It had, he'd want to go => he would.
-    "'m"      : "'m",
-    "'re"     : "'re",
-    "'ll"     : "'ll",
-    "'ve"     : "'ve"
+    "n't": "n't",  # Regular don't, isn't, wasn't, doesn't, haven't, ...
+    # Can't disambiguate: it's been => it has been, it's hot => it is hot.
+    "'s": "'s",
+    # Can't disambiguate: I'd better go => It had, he'd want to go => he would.
+    "'d": "'d",
+    "'m": "'m",
+    "'re": "'re",
+    "'ll": "'ll",
+    "'ve": "'ve"
 }
 # Shouldn't split 60's, 1960's, 9's but not currently in use.
 era = re.compile("^[0-9]+'s$")
+
 
 def case_sensitive(word, replacement):
     """ Attempts to return replacement in the same case as the given word.
@@ -299,6 +337,7 @@ def case_sensitive(word, replacement):
     if is_capitalized(word):
         return r.capitalize()
     return r
+
 
 def case_insensitive(pattern, replacement, word):
     '''Replaces the pattern with replacement. Patterns are case-insensitively matched.
@@ -332,7 +371,7 @@ def split_contraction(word):
         if k in contractions_apostrophe:
             return case_sensitive(word.lstrip("'"), contractions_apostrophe[k]).split(" ")
         for s in contractions_suffixes:
-            if k.endswith(s) and len(k)>len(s):
+            if k.endswith(s) and len(k) > len(s):
                 # Disambiguate between upper case and lower case to avoid insertion of an extra 's when splitting CREATOR'S
                 if word.isupper():
                     return [case_insensitive(s, "", word), contractions_suffixes[s].upper()]
@@ -343,6 +382,7 @@ def split_contraction(word):
 #--- HYPHENATION -------------------------------------------------------------------------------------
 # Hyphens at the end of a line mark words that have been split across lines.
 
+
 # Hyphenated words are those that end in a single "-".
 # Unknown cases (e.g. "blah--", "-") are ignored.
 hyphen = re.compile("\w\-$")
@@ -352,8 +392,9 @@ coordinators = ["and", "or"]
 
 # Words starting with "and-" or "or-".
 # Rare, e.g. rag- \nand-bone man.
-coordination_prefix = "|".join([x+"-" for x in coordinators])
-coordination_prefix = re.compile("^"+coordination_prefix+"-")
+coordination_prefix = "|".join([x + "-" for x in coordinators])
+coordination_prefix = re.compile("^" + coordination_prefix + "-")
+
 
 def split_hyphenation(words=[]):
     """ Joins words that have been hyphenated by line-wrapping, i.e. "mar- \nket" => "market\n".
@@ -369,21 +410,21 @@ def split_hyphenation(words=[]):
     p, i, n = [], 0, len(words)
     while i < n:
         w1 = words[i]
-        br = i<n-1 and words[i+1] or ""
-        w2 = i<n-2 and words[i+2] or ""
+        br = i < n - 1 and words[i + 1] or ""
+        w2 = i < n - 2 and words[i + 2] or ""
         # Check for a break first, lazy evaluation might save us a regex lookup.
         if br == "\n" and w2 and hyphen.search(w1) != None:
             if is_capitalized(w2):                       # (1)
-                p.extend([w1+w2,"\n"])
+                p.extend([w1 + w2, "\n"])
             elif w2 in coordinators \
-              or coordination_prefix.search(w2) != None: # (2) + schiet- \nen-vechtgeval
-                p.extend([w1,"\n",w2])
+                    or coordination_prefix.search(w2) != None:  # (2) + schiet- \nen-vechtgeval
+                p.extend([w1, "\n", w2])
             elif is_uppercase(w1[-2]):                   # (3)
-                p.extend([w1+w2,"\n"])
+                p.extend([w1 + w2, "\n"])
             elif w1[0:-1] in numeric:                    # (4)
-                p.extend([w1+w2,"\n"])
+                p.extend([w1 + w2, "\n"])
             else:                                        # (5)
-                p.extend([w1[0:-1]+w2,"\n"])
+                p.extend([w1[0:-1] + w2, "\n"])
             i += 2
         else:
             p.append(w1)
@@ -393,21 +434,30 @@ def split_hyphenation(words=[]):
 #--- MISSING SPACE -----------------------------------------------------------------------------------
 # Punctuation inside a word can indicate a missing space, e.g. "Hello;and goodbye".
 
+
 # The general idea of how to split word internal punctuation.
 # Exceptions and corrections can be handled in assert_split().
 dashes = "|".join(DASHES)
 missing_space = (
-    re.compile("^(.*?)(\.\.+)(.*)"),       # multiple periods:               "wait..go" => "wait .. go"
- #   re.compile("^(.*?\))(\.)(.*)"),        # period preceded by parenthesis: "wait).go" => "wait) . go"
-    re.compile("^(.*?\.)(\(|\[)(.*)"),     # period followed by parenthesis: "wait.(go" => "wait . (go"
-    re.compile("^([^\(]*?)(\))(.*)"),      # unbalanced parenthesis:         "wait)go"  => "wait ) go"
-#    re.compile("^(.*?)(\.)([A-Z].*)"),     # period followed by capital:     "wait.Go"  => "wait . Go"  # Gives problems with abbreviations U.S becomes U. S.
-    re.compile("^(.*?)(,|;|:)(.+)"),     # word internal punctuation:      "wait;go"  => "wait ; go"
-    re.compile("^(.*?)("+dashes+")(.*)"),  # em-dash and en-dash:            "wait—go"  => "wait — go"
-    re.compile("^(.*?)("+entity+")(.*)"),  # HTML/Unicode entities:        "&eacute;go" => "&eacute; go"
-#    re.compile("(\d+)(-)(\d+)"),           # number range:                   "100-200"  => "100 - 200"  # Penn treebank's choice
-    re.compile("^(.*?)(\[\d+\])(.*)"),       # Wikipedia references:           "wait[1]"  => "wait [1]"
+    # multiple periods:               "wait..go" => "wait .. go"
+    re.compile("^(.*?)(\.\.+)(.*)"),
+    #   re.compile("^(.*?\))(\.)(.*)"),        # period preceded by parenthesis: "wait).go" => "wait) . go"
+    # period followed by parenthesis: "wait.(go" => "wait . (go"
+    re.compile("^(.*?\.)(\(|\[)(.*)"),
+    # unbalanced parenthesis:         "wait)go"  => "wait ) go"
+    re.compile("^([^\(]*?)(\))(.*)"),
+    #    re.compile("^(.*?)(\.)([A-Z].*)"),     # period followed by capital:     "wait.Go"  => "wait . Go"  # Gives problems with abbreviations U.S becomes U. S.
+    # word internal punctuation:      "wait;go"  => "wait ; go"
+    re.compile("^(.*?)(,|;|:)(.+)"),
+    # em-dash and en-dash:            "wait—go"  => "wait — go"
+    re.compile("^(.*?)(" + dashes + ")(.*)"),
+    # HTML/Unicode entities:        "&eacute;go" => "&eacute; go"
+    re.compile("^(.*?)(" + entity + ")(.*)"),
+    #    re.compile("(\d+)(-)(\d+)"),           # number range:                   "100-200"  => "100 - 200"  # Penn treebank's choice
+    # Wikipedia references:           "wait[1]"  => "wait [1]"
+    re.compile("^(.*?)(\[\d+\])(.*)"),
 )
+
 
 def assert_split(a, b, c, sets=[]):
     """ Returns (a,b) if splitting a word into a and b seems correct.
@@ -415,15 +465,16 @@ def assert_split(a, b, c, sets=[]):
     """
     if b.startswith("."):
         # Split "etc.," to ["etc.", ","] instead of ["etc", ".", ","]
-        if b == ".," or in_any(a+".", sets):
-            return a+".", b[1:], c
+        if b == ".," or in_any(a + ".", sets):
+            return a + ".", b[1:], c
     if b == ",":
         # Split "6,000-year" to ["6", ",", "000-year"]
         # Added the  a[-1] in [')', '\''] condition for biomedical entries like: 3(R),3a(S),6a(R)-bis-tetrahydrofuranylurethane
-        if len(a)>0 and (is_int(a[-1]) or a[-1] in [')', '\'']) and \
-              len(c)>0 and is_int(c[0]):
+        if len(a) > 0 and (is_int(a[-1]) or a[-1] in [')', '\'']) and \
+                len(c) > 0 and is_int(c[0]):
             return None, None, None
     return a, b, c
+
 
 def split_missing_space(word, ignore=[abbreviations, numeric, URI, entities]):
     """ Splits words that are probably two word with missing punctuation in between.
@@ -436,7 +487,7 @@ def split_missing_space(word, ignore=[abbreviations, numeric, URI, entities]):
     # is not validate as a number, whereas "10:45" is.
     # So we check if it is a number with the word's head and tail punctuation removed.
     # This head and tail punctuation needs to be split in a later step - see split_punctuation().
-    #print "split_space,",word
+    # print "split_space,",word
     if in_any(word.strip("".join(PUNCTUATION)), ignore):
         return [word]
 
@@ -444,35 +495,43 @@ def split_missing_space(word, ignore=[abbreviations, numeric, URI, entities]):
         m = p.search(word)
         if m != None:
             a, b, c = m.group(1), m.group(2), m.group(3)
-            a, b, c = assert_split(a, b, c, ignore) # etc., => etc.][. not etc][.,
-            if a == b == c == None : continue
+            # etc., => etc.][. not etc][.,
+            a, b, c = assert_split(a, b, c, ignore)
+            if a == b == c == None:
+                continue
             S = [b]
             # The split "words" in the chain may not have been examined, recurse them.
-            if len(a) > 0: S = split_missing_space(a, ignore) + S
-            if len(c) > 0: S+= split_missing_space(c, ignore)
+            if len(a) > 0:
+                S = split_missing_space(a, ignore) + S
+            if len(c) > 0:
+                S += split_missing_space(c, ignore)
             return [x for x in S if x != ""]
     return [word]
 
 #--- PUNCTUATION -------------------------------------------------------------------------------------
 # Deal with punctuation at the head or tail of a word.
 
-punctuation = dict.fromkeys(PUNCTUATION, True) # Dictionary lookup is faster.
+
+punctuation = dict.fromkeys(PUNCTUATION, True)  # Dictionary lookup is faster.
 
 # A number of words to keep intact:
 punctuation_head = Range()
 punctuation_head.patterns = [
     re.compile("^\.[0-9]+"),             # calibre: .22
     re.compile("^'[0-9][0-9](-|$)"),     # year: '93 '93-'94
-    re.compile("^\([A-Za-z]+(-\)|\)-)"), # rare: (oud-)student (her)-introductie
+    # rare: (oud-)student (her)-introductie
+    re.compile("^\([A-Za-z]+(-\)|\)-)"),
 ]
 punctuation_subst = Range()
 punctuation_subst.patterns = [
-    re.compile("^\([A-Za-z]+(-\)|\)-)$"), # rare: livers of bile duct ligation (BDL)- or ethinyl estradiol (EE)-injected rats
+    # rare: livers of bile duct ligation (BDL)- or ethinyl estradiol (EE)-injected rats
+    re.compile("^\([A-Za-z]+(-\)|\)-)$"),
 ]
 punctuation_tail = Range()
 punctuation_tail.patterns = [
     re.compile(".\([A-Za-z]+\)$"),       # rare: koning(in)
 ]
+
 
 def split_chars(word, chunk=".-"):
     """ Returns a list of characters in the given string.
@@ -486,6 +545,7 @@ def split_chars(word, chunk=".-"):
         else:
             p.append(ch)
     return p[1:] or [""]
+
 
 def split_punctuation(word, ignore=[abbreviations, numeric, URI, entities]):
     """ Splits punctuation from the head and tail of the word.
@@ -511,48 +571,52 @@ def split_punctuation(word, ignore=[abbreviations, numeric, URI, entities]):
         return [word]
 
     # Find the head and the tail of the word containing punctuation.
-    p, i, j = [], 0, len(word)-1
-    while i<=j and word[i] in punctuation:
-        if i==j:
-            i+=1
-        elif word[i+1] not in '0123456789':
-            i+=1
+    p, i, j = [], 0, len(word) - 1
+    while i <= j and word[i] in punctuation:
+        if i == j:
+            i += 1
+        elif word[i + 1] not in '0123456789':
+            i += 1
         elif word[i] != '.':
-            i+=1
+            i += 1
         else:
             break
 
-
-    while j>=0 and word[j] in punctuation: j-=1
+    while j >= 0 and word[j] in punctuation:
+        j -= 1
     # Discard the head or tail if the punctuation is valid (e.g. .22 calibre).
 
     try:
-        if word[j+1] == ')' and word[i:j+1].count('(') - word[i:j+1].count(')') > 0:
+        if word[j + 1] == ')' and word[i:j + 1].count('(') - word[i:j + 1].count(')') > 0:
             # There are more closing than opening brackets in the part of the word that is kept
             # so leave the closing bracket(s) attached
 
-            #This is a bit more intelligent than the old: if word in punctuation_tail: j=len(word)
+            # This is a bit more intelligent than the old: if word in punctuation_tail: j=len(word)
             j += word[i:j].count('(') - word[i:j].count(')')
     except IndexError:
         pass
 
     if word in punctuation_head \
-    or word[:j+1] in contractions_apostrophe: i=0
+            or word[:j + 1] in contractions_apostrophe:
+        i = 0
     # If the head and the tail are the same,
     # i.e. the word consists entirely out of punctuation), discard the tail.
-    a, b, c = word[:i], word[i:j+1], j>-1 and word[j+1:] or ""
-    b, c, X = assert_split(b, c, "", ignore) # etc., => etc.][. not etc][.,
-    if b == c == X == None: return [word]
+    a, b, c = word[:i], word[i:j + 1], j > -1 and word[j + 1:] or ""
+    b, c, X = assert_split(b, c, "", ignore)  # etc., => etc.][. not etc][.,
+    if b == c == X == None:
+        return [word]
     # Split the punctuation.
-    a = split_chars(a, chunk=".-'\"<>") # Keep dashes, ellipsis etc. together: -- ...
+    # Keep dashes, ellipsis etc. together: -- ...
+    a = split_chars(a, chunk=".-'\"<>")
     c = split_chars(c, chunk=".-'\"<>")
     # Split units from numbers: We ran a 100km. => We ran a 100 km .
     b = split_numeric(b)
-    return [x for x in a+b+c if x != ""]
+    return [x for x in a + b + c if x != ""]
 
 #---- WORDS ------------------------------------------------------------------------------------------
 
-def split_words(string, keep="\n"):   #按词切分，应该保留'\n'
+
+def split_words(string, keep="\n"):  # 按词切分，应该保留'\n'
     """ Returns a list of words in the given string.
         All whitespace characters except those defined as keepers are replaced by a standard space.
         Multiple spaces are collapsed to a single space,
@@ -561,54 +625,59 @@ def split_words(string, keep="\n"):   #按词切分，应该保留'\n'
         We retain \n (newline) in the output is because we need it to process hyphenation.
     """
     w = "|".join(filter(lambda ch: ch not in keep, WHITESPACE))
-    #print "wwww: ",w
+    # print "wwww: ",w
     for ch in keep:
         # Collapse keepers, e.g, "\n \n" => "\n".
         # We will be splitting on spaces in a minute,
         # so ensure there is a space around each keeper.
-        string = re.sub(ch+"["+ch+"|\s]+", ch, string)
-        string = re.sub("\s{0,1}\n\s{0,1}", " "+ch+" ", string)
-    #print "569:",string
+        string = re.sub(ch + "[" + ch + "|\s]+", ch, string)
+        string = re.sub("\s{0,1}\n\s{0,1}", " " + ch + " ", string)
+    # print "569:",string
     string = string.strip()
     string = re.compile(w).sub(" ", string)
     string = re.sub(" +", " ", string)
     return string.split(" ")
+
+
 def isascii(word):
     return all(ord(char) < 128 for char in word)
+
+
 def split_utf8(all_words):
-    #clean \n
-    #print "ori[0],",all_words[0]
-    #print "ISASCII,",isascii(all_words[0])
-    #if len(all_words) > 1:
+    # clean \n
+    # print "ori[0],",all_words[0]
+    # print "ISASCII,",isascii(all_words[0])
+    # if len(all_words) > 1:
     #    return all_words
-    #else:
+    # else:
     if len(all_words[0]) < 10 and isascii(all_words[0]):
-        #print "GOD here:",len(all_words[0])
-        #print "isaci",isascii(all_words[0])
-        #single english word
+        # print "GOD here:",len(all_words[0])
+        # print "isaci",isascii(all_words[0])
+        # single english word
         return all_words
-    ##GOD DAMN CJK
+    # GOD DAMN CJK
     words = []
     asic_saver = ""
     for sentence in all_words:
-        for index,word in enumerate(sentence):
-            #print "type:",type(word)#always unicode
-            #print index
+        for index, word in enumerate(sentence):
+            # print "type:",type(word)#always unicode
+            # print index
             if isascii(word):
-                asic_saver+= word
+                asic_saver += word
             elif isinstance(word, unicode):
                 if len(asic_saver) > 0:
                     words.append(asic_saver)
-                    #print "asic:",asic_saver
-                    asic_saver=""
+                    # print "asic:",asic_saver
+                    asic_saver = ""
                 words.append(word)
-        #append last ascii back to list
+        # append last ascii back to list
         if len(asic_saver) > 0:
             words.append(asic_saver)
-            #print "Last asic:",asic_saver
-            asic_saver=""
+            # print "Last asic:",asic_saver
+            asic_saver = ""
     return words
-    #print "after,",list(string)
+    # print "after,",list(string)
+
 
 def split_word(word, ignore=[abbreviations, numeric, URI, entities]):
     """ Splits contracted words, joined words with a missing space, punctuation.
@@ -616,9 +685,11 @@ def split_word(word, ignore=[abbreviations, numeric, URI, entities]):
         can't... => ["cannot", "..."]
     """
     if word.lower() == 'cannot':
-        #Special rule for cannot because the split_contraction is not called on all alpha words
-        a=[word]
-        b = []; [b.extend(split_contraction(word)) for word in a]; return b
+        # Special rule for cannot because the split_contraction is not called on all alpha words
+        a = [word]
+        b = []
+        [b.extend(split_contraction(word)) for word in a]
+        return b
 
     if word.isalpha():
         # We're in luck: the word contains only alphabetic characters, no disambiguation needed.
@@ -628,14 +699,20 @@ def split_word(word, ignore=[abbreviations, numeric, URI, entities]):
         # If the word is in a known range (e.g. a HTML entity or abbreviation),
         # no further processing is required. We do split any number unit (e.g. 1000km => 1000 km).
         return split_numeric(word)
-    #print "594",word
+    # print "594",word
     a = [word]
     #b = [];
-    b = []; [b.extend(split_missing_space(word, ignore)) for word in a]; a=b
-    #print "596,",b
-    b = []; [b.extend(split_punctuation(word, ignore)) for word in a]; a=b
-    #print "599,",b
-    b = []; [b.extend(split_contraction(word)) for word in a]; a=b
+    b = []
+    [b.extend(split_missing_space(word, ignore)) for word in a]
+    a = b
+    # print "596,",b
+    b = []
+    [b.extend(split_punctuation(word, ignore)) for word in a]
+    a = b
+    # print "599,",b
+    b = []
+    [b.extend(split_contraction(word)) for word in a]
+    a = b
     return a
 
 #--- TAGS --------------------------------------------------------------------------------------------
@@ -643,31 +720,37 @@ def split_word(word, ignore=[abbreviations, numeric, URI, entities]):
 # If they need to be retained someone needs to add checks.
 # Beware: <a href="foo" onclick="do();" fontsize=12> is a valid HTML tag...
 
+
 tags = re.compile("</{0,1}.*?>")
 
 # Before strippping tags, replace the following:
 HTML_LIST_ITEM = "HTML___LIST___ITEM "
 tags_replace = {
-    re.compile("<head.*?>.*?</head>")     : "",             # Remove HTML metadata.
-    re.compile("<style.*?>.*?</style>")   : "",             # Remove HTML CSS.
-    re.compile("<script.*?>.*?</script>") : "",             # Remove HMTL Javascript.
-    re.compile("<li.*?>")                 : HTML_LIST_ITEM, # Add list markers for split_lists().
-    re.compile("\.{0,1}</h\d>")           : ". ",           # A <h1> block always ends sentence,
+    re.compile("<head.*?>.*?</head>"): "",             # Remove HTML metadata.
+    re.compile("<style.*?>.*?</style>"): "",             # Remove HTML CSS.
+    # Remove HMTL Javascript.
+    re.compile("<script.*?>.*?</script>"): "",
+    # Add list markers for split_lists().
+    re.compile("<li.*?>"): HTML_LIST_ITEM,
+    # A <h1> block always ends sentence,
+    re.compile("\.{0,1}</h\d>"): ". ",
 }                                                           # accomplished by adding a perdiod.
+
 
 def strip_tags(string, replace=tags_replace):
     """ Strips all tags from the given string.
     """
-    for p,r in replace.items():
+    for p, r in replace.items():
         string = p.sub(r, string)
     return tags.sub("", string)
 
 #--- SENTENCES ---------------------------------------------------------------------------------------
 
+
 # Separated period always ends sentence.
 # Punctuation like ? and ! end sentence when followed by a capitalized letter.
 #stop_always = ["."]
-stop_assert = [ ".","?", "!", "..", "...", "....", "etc."]
+stop_assert = [".", "?", "!", "..", "...", "....", "etc."]
 
 # Parenthesis and quotes can be part of the sentence even if the period preceeds it.
 # We will check for open/close balance, e.g.:
@@ -676,22 +759,23 @@ stop_assert = [ ".","?", "!", "..", "...", "....", "etc."]
 parenthesis = [")", "]", "}"]
 start_parenthesis = ["(", "[", "{"]
 quotes = ["\"", "'", "''", "'''", "\"\"\""]
-continuation = [":", ";",","]
+continuation = [":", ";", ","]
 
-stop_assert_Chinese = [u"。",u".",u"？",u"！", u"……"]
+stop_assert_Chinese = [u"。", u".", u"？", u"！", u"……"]
 parenthesis_Chinese = [u")", u"]", u"}"]
-continuation_Chinese = [u"：", u"；",u"，",u"、"]
+continuation_Chinese = [u"：", u"；", u"，", u"、"]
 
 ASSERT = "assert"
-SENTENCE_BREAK  = "SENTENCE___BREAK"
+SENTENCE_BREAK = "SENTENCE___BREAK"
 
 # No spaces allowed in patterns!
 # (Adams, A. E. M., D. Botstein, and D. G. Drubin. 1991. Nature (Lond.). 354:404-408.)
 # (Adams, A. E. M., and D. Botstein. 1989. Genetics. 121:675-683.)
 # (Drubin, D. G., K. G. Miller, and D. Botstein. 1988. J. Cell Biol. 107: 2551-2561.)
 # [Pantaloni, D., et al. (1984)J. Biol. Chem. 259, 6274-6283]
-nobreak = ( re.compile('\([A-Za-z,.]+\d\d\d\d\.[A-Z-a-z().]+\d+:\d+-\d+\.?\)'),
-            re.compile('\[[A-Za-z,.]+\(\d{4}\)[A-Za-z.]+\d+,\d+-\d+\]') )  # This is ok and should be in a final version but because we added this patterns after processing Biograph it's turned off.
+nobreak = (re.compile('\([A-Za-z,.]+\d\d\d\d\.[A-Z-a-z().]+\d+:\d+-\d+\.?\)'),
+           re.compile('\[[A-Za-z,.]+\(\d{4}\)[A-Za-z.]+\d+,\d+-\d+\]'))  # This is ok and should be in a final version but because we added this patterns after processing Biograph it's turned off.
+
 
 def prohibited_sentence_break(words=[]):
     '''Ad hoc function that makes that the patterns in nobreak
@@ -699,14 +783,15 @@ def prohibited_sentence_break(words=[]):
 
     Returns a list of token indices that cannot be preceded by a sentence break.
     '''
-    output=[]; links=[]
-    for i,word in enumerate(words):
+    output = []
+    links = []
+    for i, word in enumerate(words):
         links.extend([i for j in range(len(word))])
 
-    string =  ''.join(words)
-    for prohibited in nobreak:     #nobreak的作用？
+    string = ''.join(words)
+    for prohibited in nobreak:  # nobreak的作用？
         for m in prohibited.finditer(string):
-            start = links[m.start()]+1
+            start = links[m.start()] + 1
             stop = links[m.end()]
             if start == stop:
                 output.append(start)
@@ -714,7 +799,6 @@ def prohibited_sentence_break(words=[]):
                 output.extend(range(start, stop))
 
     return output
-
 
 
 def add_sentence_breaks(words=[], max_len=400, marker=SENTENCE_BREAK):
@@ -728,19 +812,18 @@ def add_sentence_breaks(words=[], max_len=400, marker=SENTENCE_BREAK):
     is_quote_complete = True
     stop_assert_record = 0
     other_record = 0
-    num=0
+    num = 0
 
+    prohibited = prohibited_sentence_break(words)  # 返回一个位置列表，指明哪些位置不能断句
 
-    prohibited = prohibited_sentence_break(words)    #返回一个位置列表，指明哪些位置不能断句
-
-    #print '695,prohibited',prohibited
+    # print '695,prohibited',prohibited
     for i in range(n):
         word = words[i]
         # We count the occurences of quotes.
         # If at any time the count for a quote is uneven, this means we are inside a quotation, e.g.
         # "All work and no play. => if the period is followed by a ", it is part of this sentence.
         if word in quotes:
-            quote_count[word] = quote_count.get(word,0)+1
+            quote_count[word] = quote_count.get(word, 0) + 1
             if is_quote_complete == True:
                 is_quote_complete = False
             else:
@@ -749,47 +832,51 @@ def add_sentence_breaks(words=[], max_len=400, marker=SENTENCE_BREAK):
         # but we need to continue scanning if quotes or parenthesis follow
         # that are still part of this sentence before adding the break.
         p.append(word)
-        num=num+1
-        #print word, stop, p
+        num = num + 1
+        # print word, stop, p
         if i not in prohibited:
-            if num> max_len:
-                if stop_assert_record!=0:               #长度大于max_len，之前有句号标点，在句号标点处断句
+            if num > max_len:
+                if stop_assert_record != 0:  # 长度大于max_len，之前有句号标点，在句号标点处断句
                     p.insert(stop_assert_record, marker)
-                    num=len(p)-stop_assert_record-1
+                    num = len(p) - stop_assert_record - 1
                     if other_record < stop_assert_record:
                         other_record = 0
-                    stop_assert_record=0
-                elif stop_assert_record==0 and other_record!=0:  #长度大于max_len，之前没有句号标点，有逗号标点，在逗号标点处断句
+                    stop_assert_record = 0
+                elif stop_assert_record == 0 and other_record != 0:  # 长度大于max_len，之前没有句号标点，有逗号标点，在逗号标点处断句
                     p.insert(other_record, marker)
-                    num=len(p)-other_record-1
-                    other_record=0
-                elif stop_assert_record==0 and other_record==0:              #长度大于max_len，并且之前没有标点，则强制断句
-                    p.insert(len(p)-1, marker)
-                    num=1
+                    num = len(p) - other_record - 1
+                    other_record = 0
+                elif stop_assert_record == 0 and other_record == 0:  # 长度大于max_len，并且之前没有标点，则强制断句
+                    p.insert(len(p) - 1, marker)
+                    num = 1
 
             if stop == True:
-                if word in parenthesis:                  # hello!) Goodbye   => hello!) ][ Goodbye
+                # hello!) Goodbye   => hello!) ][ Goodbye
+                if word in parenthesis:
                     pass
                 elif word in quotes:
-                    if quote_count.get(word,0) % 2 != 0: # Hello. "Goodbye". => Hello. ][ "Goodbye".
-                        p.insert(len(p)-1, marker)
+                    # Hello. "Goodbye". => Hello. ][ "Goodbye".
+                    if quote_count.get(word, 0) % 2 != 0:
+                        p.insert(len(p) - 1, marker)
                         stop = False
-                        num=1
-                        stop_assert_record=0
-                        other_record=0
-                    else:                                # "Hello." Goodbye. => "Hello." ][ Goodbye.
-                        stop_assert_record=len(p)-1
-                elif stop == True and word in continuation:   # For the case of "dilution series in pet.:0.3%-1%" don't split before the :
-                    stop=False
-                    other_record=len(p)
-                elif stop == True and (is_capitalized(word)==False or word in start_parenthesis):
-                    stop=False
-                elif stop == True and is_quote_complete == True and (is_capitalized(word) or word in start_parenthesis):
-                    p.insert(len(p)-1, marker)
+                        num = 1
+                        stop_assert_record = 0
+                        other_record = 0
+                    # "Hello." Goodbye. => "Hello." ][ Goodbye.
+                    else:
+                        stop_assert_record = len(p) - 1
+                # For the case of "dilution series in pet.:0.3%-1%" don't split before the :
+                elif stop == True and word in continuation:
                     stop = False
-                    num=1
-                    stop_assert_record=0
-                    other_record=0
+                    other_record = len(p)
+                elif stop == True and (is_capitalized(word) == False or word in start_parenthesis):
+                    stop = False
+                elif stop == True and is_quote_complete == True and (is_capitalized(word) or word in start_parenthesis):
+                    p.insert(len(p) - 1, marker)
+                    stop = False
+                    num = 1
+                    stop_assert_record = 0
+                    other_record = 0
                 else:
                     #stop = False
                     pass
@@ -802,26 +889,26 @@ def add_sentence_breaks(words=[], max_len=400, marker=SENTENCE_BREAK):
             else:
                 if word in stop_assert:
                     stop = True
-                    stop_assert_record=len(p)
+                    stop_assert_record = len(p)
                 elif word in continuation:
-                    other_record=len(p)
+                    other_record = len(p)
                 elif word in quotes:
                     if is_quote_complete == True:
-                        stop_assert_record=len(p)
+                        stop_assert_record = len(p)
                     else:
-                        stop_assert_record=len(p)-1
+                        stop_assert_record = len(p) - 1
                 else:
                     pass
 
         else:
-            stop=False
-
+            stop = False
 
     # Don't forget the sentence break at the end of the list,
     # e.g. ["'", "Enough", "of", "this", "!", "'"]
     if stop == True:
         p.append(marker)
     return p
+
 
 def split_sentences(words=[], marker=SENTENCE_BREAK):
     """ Returns a list of sentences. Each sentence is a list of tokens.
@@ -844,9 +931,12 @@ def split_sentences(words=[], marker=SENTENCE_BREAK):
 
 #--- LISTS -------------------------------------------------------------------------------------------
 
-list_marker = re.compile("^(\d+\.|\d+\)|\*|\-|[a-z]\.|[a-z]\))$") # 1. 1) * - a. a)
 
-def split_lists(words=[], marker=SENTENCE_BREAK):     #在符合条件的地方加上SENTENCE___BREAK
+# 1. 1) * - a. a)
+list_marker = re.compile("^(\d+\.|\d+\)|\*|\-|[a-z]\.|[a-z]\))$")
+
+
+def split_lists(words=[], marker=SENTENCE_BREAK):  # 在符合条件的地方加上SENTENCE___BREAK
     """ Adds sentence breaks before list item markers.
         A list item marker is only taken into account when at the start of a new line.
         Occurences of HTML_LIST_ITEM (i.e. <li>, see strip_tags()) also get a sentence break.
@@ -856,10 +946,10 @@ def split_lists(words=[], marker=SENTENCE_BREAK):     #在符合条件的地方�
     for i, word in enumerate(words):
         if word == HTML_LIST_ITEM:
             p.append(marker)
-        elif i==0 or words[i-1] == "\n" and list_marker.search(word):
+        elif i == 0 or words[i - 1] == "\n" and list_marker.search(word):
             p.append(marker)
             p.append(word)
-        elif i>0 and words[i-1] == "\n":
+        elif i > 0 and words[i - 1] == "\n":
             # If a linebreak occured and no list item follows,
             # this marks the end of the list. Add a sentence break.
             p.append(marker)
@@ -870,15 +960,17 @@ def split_lists(words=[], marker=SENTENCE_BREAK):     #在符合条件的地方�
 
 ######################################################################################################
 
+
 # Punctuation replacements for unicode characters.
 # This makes our life easier - in the rest of the module we can simply work with ' and ".
 unicode_replacements = {
-    u"‘’‚‛`´ʹʻʼʾʿˋˊ˴" : "'",   # Single quote lookalikes.
-         u"“”„‟ʺˮ˵˶˝" : "\"",  # Double quote lookalikes.
-                 u"…" : "...", # Unicode ellipsis.
-                 u"«" : "<<",
-                 u"»" : ">>",
+    u"‘’‚‛`´ʹʻʼʾʿˋˊ˴": "'",   # Single quote lookalikes.
+    u"“”„‟ʺˮ˵˶˝": "\"",  # Double quote lookalikes.
+    u"…": "...",  # Unicode ellipsis.
+    u"«": "<<",
+    u"»": ">>",
 }
+
 
 def split(string, max_len=200, tags=True, replace=unicode_replacements):
     """ Splits the string into a list of sentences.
@@ -887,45 +979,46 @@ def split(string, max_len=200, tags=True, replace=unicode_replacements):
         The replace dictionary contains (unicode) strings to normalize.
     """
     # Make sure we have a unicode string.
-    #if isinstance(string, str):      #判定string是否str类型
+    # if isinstance(string, str):      #判定string是否str类型
     string = string.decode("utf-8")
-    for k,v in replace.items():
+    for k, v in replace.items():
         for k in k:
-            string = re.sub(k,v, string)   #将string中的k用v代替
+            string = re.sub(k, v, string)  # 将string中的k用v代替
     if not tags:
-        string = strip_tags(string)    #将string中所有tags用指定字符替代
-    #print "GOLDEN_M 855",string
+        string = strip_tags(string)  # 将string中所有tags用指定字符替代
+    # print "GOLDEN_M 855",string
     # Collapse whitespace and split on each space.
     # We keep \n as a separate token because we still need it to check lists and hyphenation.
     words = split_words(string, keep="\n")
     # split CJK-utf16 WORDS
-    #print "889,CJK,",words
+    # print "889,CJK,",words
     words = split_utf8(words)
-    #print "891,CJK_AFTER,",words
+    # print "891,CJK_AFTER,",words
 
-    #print "GOLDEN_M 855",words
-    words = split_lists(words)        #在符合条件的地方加上SENTENCE___BREAK，主要是换行处
-    #print "GOLDEN_M 857",words
+    # print "GOLDEN_M 855",words
+    words = split_lists(words)  # 在符合条件的地方加上SENTENCE___BREAK，主要是换行处
+    # print "GOLDEN_M 857",words
     words = split_hyphenation(words)
-    #print "GOLDEN_M 859",words
-    words = [word for word in words if word != "\n"]    #去掉"\n"符
-    #print "GOLDEN_M 865",words
+    # print "GOLDEN_M 859",words
+    words = [word for word in words if word != "\n"]  # 去掉"\n"符
+    # print "GOLDEN_M 865",words
     # Split words with missing spaces, contractions, etc.
     # Keep list item markers at the start of the sentence intact - see split_lists().
-    #print "867,", words
+    # print "867,", words
     p = []
-    list_marker_encounter=None
-    #print "GOLDEN_M ",words
+    list_marker_encounter = None
+    # print "GOLDEN_M ",words
     for i, word in enumerate(words):
         clm = -10
         list_marker_char = list_marker.search(word)
         if list_marker_char is not None:
-            #print "marker,",list_marker_char
-            if i==0 or words[i-1] == SENTENCE_BREAK:
+            # print "marker,",list_marker_char
+            if i == 0 or words[i - 1] == SENTENCE_BREAK:
                 p.append(word)
 
                 try:
-                    list_marker_encounter=int(list_marker_char.group().rstrip('.'))
+                    list_marker_encounter = int(
+                        list_marker_char.group().rstrip('.'))
                 except ValueError:
                     pass
 
@@ -939,40 +1032,40 @@ def split(string, max_len=200, tags=True, replace=unicode_replacements):
                 # The number of SMemb-positive glomerular cells increased on days 2 and 4. 4 .
                 # We examined whether levels of alpha-smooth-muscle actin
                 # Where the second 4. is the listmarker
-                if i < len(words)-1:
+                if i < len(words) - 1:
                     try:
-                        next=int(list_marker.search(words[i+1]).group().rstrip('.'))
+                        next = int(list_marker.search(
+                            words[i + 1]).group().rstrip('.'))
                     except Exception:
-                        #Nice try but just go one
+                        # Nice try but just go one
                         pass
                     else:
                         if next == clm:
-                            #This means that we are in the special case (the first 4.), so just split this occurrence
+                            # This means that we are in the special case (the first 4.), so just split this occurrence
                             p.extend(split_word(word))
                             continue
 
-                if clm == list_marker_encounter+1:
+                if clm == list_marker_encounter + 1:
                     # Only don't split 2. etc. if we already saw a listmarker 1.
                     p.append(word)
                     list_marker_encounter = clm
                 else:
-                    #Split normally
+                    # Split normally
                     p.extend(split_word(word))
             else:
-                #Split normally
+                # Split normally
                 p.extend(split_word(word))
         else:
-            #print " ",word
+            # print " ",word
             p.extend(split_word(word))
     # Add sentence breaks after periods and other punctuation that indicate the end of the sentence.
     # Parse sentence breaks and create a list of individual sentence strings.
-    #print "918,",p
-    p = add_sentence_breaks(p,max_len)     #重点*********************
-    #print "P,924", p
+    # print "918,",p
+    p = add_sentence_breaks(p, max_len)  # 重点*********************
+    # print "P,924", p
     p = split_sentences(p)
-    #print "GOLDEN_M 922",p
-    p= [" ".join(sentence) for sentence in p]
-
+    # print "GOLDEN_M 922",p
+    p = [" ".join(sentence) for sentence in p]
 
     if tags:
         check(string, '\n'.join(p))
@@ -980,16 +1073,16 @@ def split(string, max_len=200, tags=True, replace=unicode_replacements):
 
 
 def split_Chinese(string, max_len=200, marker=SENTENCE_BREAK):
-    p=[]
-    n=len(string)
+    p = []
+    n = len(string)
     stop = False
     is_quote_complete = True
     stop_assert_record = 0
     other_record = 0
-    num=0
+    num = 0
 
     for i in range(n):
-        word=string[i]
+        word = string[i]
         if word in quotes:
             if is_quote_complete == True:
                 is_quote_complete = False
@@ -997,93 +1090,96 @@ def split_Chinese(string, max_len=200, marker=SENTENCE_BREAK):
                 is_quote_complete = True
 
         if word == u'“':
-            is_quote_complete=False
+            is_quote_complete = False
         if word == u'”':
-            is_quote_complete=True
+            is_quote_complete = True
 
         p.append(word)
-        num=num+1
+        num = num + 1
 
-        if num> max_len:
-            if stop_assert_record!=0:               #长度大于max_len，之前有句号标点，在句号标点处断句
+        if num > max_len:
+            if stop_assert_record != 0:  # 长度大于max_len，之前有句号标点，在句号标点处断句
                 p.insert(stop_assert_record, marker)
-                num=len(p)-stop_assert_record-1
+                num = len(p) - stop_assert_record - 1
                 if other_record < stop_assert_record:
                     other_record = 0
-                stop_assert_record=0
-            elif stop_assert_record==0 and other_record!=0:  #长度大于max_len，之前没有句号标点，有逗号标点，在逗号标点处断句
+                stop_assert_record = 0
+            elif stop_assert_record == 0 and other_record != 0:  # 长度大于max_len，之前没有句号标点，有逗号标点，在逗号标点处断句
                 p.insert(other_record, marker)
-                num=len(p)-other_record-1
-                other_record=0
-            elif stop_assert_record==0 and other_record==0:              #长度大于max_len，并且之前没有标点，则强制断句
-                p.insert(len(p)-1, marker)
-                num=1
+                num = len(p) - other_record - 1
+                other_record = 0
+            elif stop_assert_record == 0 and other_record == 0:  # 长度大于max_len，并且之前没有标点，则强制断句
+                p.insert(len(p) - 1, marker)
+                num = 1
 
         if stop != False:
-            if word in parenthesis_Chinese:                  # hello!) Goodbye   => hello!) ][ Goodbye
+            # hello!) Goodbye   => hello!) ][ Goodbye
+            if word in parenthesis_Chinese:
                 pass
             elif word in stop_assert_Chinese:
-                stop_assert_record=len(p)
+                stop_assert_record = len(p)
             elif word == u'“':
-                p.insert(len(p)-1, marker)
-                stop=False
-                num=1
-                stop_assert_record=0
-                other_record=0
+                p.insert(len(p) - 1, marker)
+                stop = False
+                num = 1
+                stop_assert_record = 0
+                other_record = 0
             elif word == u'”':
-                stop=ASSERT                              # hello!""Goodbye!" => hello!"]["Goodbye!"
-                other_record=len(p)
+                # hello!""Goodbye!" => hello!"]["Goodbye!"
+                stop = ASSERT
+                other_record = len(p)
             elif word in quotes:
-                if is_quote_complete == False: # Hello. "Goodbye". => Hello. ][ "Goodbye".
-                    p.insert(len(p)-1, marker)
+                # Hello. "Goodbye". => Hello. ][ "Goodbye".
+                if is_quote_complete == False:
+                    p.insert(len(p) - 1, marker)
                     stop = False
-                    num=1
-                    stop_assert_record=0
-                    other_record=0
+                    num = 1
+                    stop_assert_record = 0
+                    other_record = 0
                 else:
-                    stop=ASSERT
-                    other_record=len(p)
-            elif stop != False and word in continuation_Chinese:   # For the case of "dilution series in pet.:0.3%-1%" don't split before the :
-                stop=False
+                    stop = ASSERT
+                    other_record = len(p)
+            # For the case of "dilution series in pet.:0.3%-1%" don't split before the :
+            elif stop != False and word in continuation_Chinese:
+                stop = False
                 other_record = len(p)
             elif stop == True and is_quote_complete == True:
-                p.insert(len(p)-1, marker)
+                p.insert(len(p) - 1, marker)
                 stop = False
-                num=1
-                stop_assert_record=0
-                other_record=0
+                num = 1
+                stop_assert_record = 0
+                other_record = 0
             else:
                 stop = False
-                #pass
+                # pass
 
         else:
             if word in stop_assert_Chinese:
-               stop = True
-               stop_assert_record=len(p)
+                stop = True
+                stop_assert_record = len(p)
             elif word in continuation_Chinese:
-                other_record=len(p)
+                other_record = len(p)
             elif word in quotes:
                 if is_quote_complete == True:
-                    other_record=len(p)
+                    other_record = len(p)
                 else:
-                    other_record=len(p)-1
-            elif word==u'“':
-                other_record=len(p)-1
-            elif word== u'”':
-                other_record=len(p)
+                    other_record = len(p) - 1
+            elif word == u'“':
+                other_record = len(p) - 1
+            elif word == u'”':
+                other_record = len(p)
             else:
                 pass
-
 
     if stop == True:
         p.append(marker)
 
     p = split_sentences(p)
 
-
-    p= [" ".join(sentence) for sentence in p]
+    p = [" ".join(sentence) for sentence in p]
 
     return p
+
 
 def split_function(language):
     '''if language == 'zh' or language=='nzh':
@@ -1095,13 +1191,16 @@ def split_function(language):
 
 #####################################################################################################
 
+
 def check(original, tokenized):
     '''Takes the original string and the tokenized string and returns True if every non-white character
     of original is in tokenized. Otherwise raises an error'''
     if ''.join(original.split()) != ''.join(tokenized.split()):
         print >>sys.stderr, 'Original:', original
-        print >>sys.stderr, 'O', len(''.join(original.split())), ''.join(original.split())
-        print >>sys.stderr, 'T', len(''.join(tokenized.split())), ''.join(tokenized.split())
+        print >>sys.stderr, 'O', len(
+            ''.join(original.split())), ''.join(original.split())
+        print >>sys.stderr, 'T', len(
+            ''.join(tokenized.split())), ''.join(tokenized.split())
         raise ValueError('not the same chars')
 
     return True
@@ -1127,14 +1226,15 @@ REMARKS
     Assumes UTF8 encoded input
     -l, -i, and -o are necessary. The default value of the maximum length of the sentence is 400.
 
-%s (version %s)''' %(__date__, __version__)
+%s (version %s)''' % (__date__, __version__)
 
 
 if __name__ == '__main__':
-    flag=[False,False,False]
-    max_len=400
+    flag = [False, False, False]
+    max_len = 400
     try:
-        opts,args=getopt.getopt(sys.argv[1:],'l:i:o:m:h', ['language=','in=','out=','help','max='])
+        opts, args = getopt.getopt(sys.argv[1:], 'l:i:o:m:h', [
+                                   'language=', 'in=', 'out=', 'help', 'max='])
     except getopt.GetoptError:
         # print help information and exit:
         _usage()
@@ -1144,44 +1244,44 @@ if __name__ == '__main__':
         if o in ('-h', '--help'):
             _usage()
             sys.exit()
-        if o in ('-l','--language'):
-            if a=='zh':
-                lan='zh'
-                flag[0]=True
-            elif a=='en':
-                lan='en'
-                flag[0]=True
+        if o in ('-l', '--language'):
+            if a == 'zh':
+                lan = 'zh'
+                flag[0] = True
+            elif a == 'en':
+                lan = 'en'
+                flag[0] = True
             else:
-                print 'The language should be set.'+'\n'
+                print 'The language should be set.' + '\n'
                 _usage()
                 sys.exit()
-        if o in ('-i','--in'):
+        if o in ('-i', '--in'):
             if a:
                 f_i = open(a, 'r')
-                flag[1]=True
+                flag[1] = True
             else:
-                print 'The input file should be set.'+'\n'
+                print 'The input file should be set.' + '\n'
                 _usage()
                 sys.exit()
-        if o in ('-o','--out'):
+        if o in ('-o', '--out'):
             if a:
-                f_o=codecs.open(a,'w','utf-8')
-                flag[2]=True
+                f_o = codecs.open(a, 'w', 'utf-8')
+                flag[2] = True
             else:
-                print 'The output file should be set.'+'\n'
+                print 'The output file should be set.' + '\n'
                 _usage()
                 sys.exit()
-        if o in ('-m','--max'):
+        if o in ('-m', '--max'):
             if a:
-                max_len=int(a)
+                max_len = int(a)
             else:
-                print 'The maximum length of the sentence should be set.'+'\n'
+                print 'The maximum length of the sentence should be set.' + '\n'
                 _usage()
                 sys.exit()
 
-    if flag[0]==False or flag[1]==False or flag[2]==False:
-            _usage()
-            sys.exit()
+    if flag[0] == False or flag[1] == False or flag[2] == False:
+        _usage()
+        sys.exit()
 
     try:
         for string in f_i.readlines():
@@ -1189,14 +1289,14 @@ if __name__ == '__main__':
             temp_string = temp_string.strip()
             if temp_string:
                 if lan == 'en':
-                    string = split(temp_string,max_len)
+                    string = split(temp_string, max_len)
                 elif lan == 'zh':
-                    string = split_Chinese(temp_string,max_len)
+                    string = split_Chinese(temp_string, max_len)
                 else:
                     _usage()
                     sys.exit()
                 if string:
-                    f_o.write('\n'.join(string)+'\n')
+                    f_o.write('\n'.join(string) + '\n')
 
     finally:
         f_i.close()
